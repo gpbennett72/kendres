@@ -1,0 +1,37 @@
+PRINCIPLE: All liability caps must be reviewed by legal team before acceptance
+RESPONSE: Request removal of liability cap or reduce to standard $500,000 amount. If cap is necessary, ensure it aligns with company risk tolerance and insurance coverage.
+
+PRINCIPLE: Indemnification clauses require mutual indemnification for intellectual property claims
+RESPONSE: Suggest mutual indemnification language. One-way indemnification is generally unacceptable unless specifically negotiated for lower-risk agreements.
+
+PRINCIPLE: Termination clauses must include at least 30 days notice period
+RESPONSE: Ensure termination clause provides adequate notice period (minimum 30 days) and clear termination procedures. Immediate termination should only be for material breach.
+
+PRINCIPLE: Payment terms exceeding Net 45 require approval
+RESPONSE: Standard payment terms are Net 30. Terms exceeding Net 45 require CFO approval and should include interest provisions for late payments.
+
+PRINCIPLE: Data processing agreements must include GDPR compliance provisions
+RESPONSE: Verify that data processing clauses include GDPR compliance, data breach notification requirements, and right to audit data handling practices.
+
+PRINCIPLE: Non-compete clauses must be limited in scope and duration
+RESPONSE: Non-compete clauses should be limited to 12 months maximum and restricted to specific geographic regions and business activities. Overly broad non-compete clauses are generally unenforceable.
+
+PRINCIPLE: Force majeure clauses must not excuse payment obligations
+RESPONSE: Ensure force majeure clause explicitly excludes payment obligations. Payment terms should remain in effect regardless of force majeure events.
+
+PRINCIPLE: Governing law should favor company's jurisdiction when possible
+RESPONSE: Prefer governing law in company's home jurisdiction. If counterparty jurisdiction is required, ensure dispute resolution mechanism (arbitration) is included.
+
+PRINCIPLE: Automatic renewal clauses require explicit opt-out mechanism
+RESPONSE: Automatic renewal clauses must include clear opt-out procedures with adequate notice period (minimum 60 days before renewal date).
+
+PRINCIPLE: Intellectual property assignments must preserve company's pre-existing IP
+RESPONSE: Ensure IP assignment clauses explicitly exclude company's pre-existing intellectual property and background technology from assignment obligations.
+
+
+
+
+
+
+
+

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redline Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo" onclick="resetInterface()" style="cursor: pointer;">
+                    <div class="logo-icon">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Logo mark with orange color -->
+                            <rect width="32" height="32" rx="6" fill="#FC5B05"/>
+                            <path d="M16 6L20 12H24L20 18L16 24L12 18L8 12H12L16 6Z" fill="white"/>
+                        </svg>
+                    </div>
+                    <div class="logo-text">
+                        <h1>Redline Agent</h1>
+                        <p class="tagline">Legal Contract Change Analysis</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Navigation Tabs -->
+                <nav class="tabs-nav">
+                    <button class="tab-btn active" data-tab="word" onclick="switchTab('word')">
+                        <span>Word Document</span>
+                    </button>
+                    <button class="tab-btn" data-tab="google" onclick="switchTab('google')">
+                        <span>Google Doc</span>
+                    </button>
+                    <button class="tab-btn" data-tab="admin" onclick="switchTab('admin')">
+                        <span>Admin</span>
+                    </button>
+                </nav>
+
+                <!-- Word Document Tab -->
+                <div id="word-tab" class="tab-panel active">
+                    <div class="card upload-card">
+                        <div class="card-header">
+                            <h2>Upload Document</h2>
+                            <p class="card-subtitle">Upload a Word document with tracked changes for analysis</p>
+                        </div>
+                        <form id="upload-form" enctype="multipart/form-data" class="upload-form">
+                            <div class="form-field">
+                                <label for="contract_type" class="field-label">Contract Type</label>
+                                <select id="contract_type" name="contract_type" class="select-input">
+                                    <option value="">Loading...</option>
+                                </select>
+                                <small class="field-hint">Select the contract type to use the appropriate playbook</small>
+                            </div>
+                            <div class="file-upload-wrapper">
+                                <input type="file" id="document" name="document" accept=".docx,.doc" required class="file-input">
+                                <label for="document" class="file-label">
+                                    <div class="file-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="file-text">
+                                        <span class="file-label-text">Choose a Word document</span>
+                                        <span class="file-hint">.docx or .doc files only</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <span>Upload Document</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="config-section" class="card config-card" style="display: none;">
+                        <div class="card-header">
+                            <h2>AI Configuration</h2>
+                            <p class="card-subtitle">Configure AI settings for redline analysis</p>
+                        </div>
+                        <form id="config-form" class="config-form">
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label for="ai_provider" class="field-label">AI Provider</label>
+                                    <select id="ai_provider" name="ai_provider" class="select-input">
+                                        <option value="openai">OpenAI</option>
+                                        <option value="anthropic" selected>Anthropic</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="model" class="field-label">Model</label>
+                                    <select id="model" name="model" class="select-input">
+                                        <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                        <option value="gpt-4">GPT-4</option>
+                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-field">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="create_summary" name="create_summary" checked class="checkbox-input">
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text">Create summary document</span>
+                                </label>
+                            </div>
+
+                            <div class="form-field" style="display: none;">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="use_tracked_changes" name="use_tracked_changes" checked class="checkbox-input">
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text">Insert responses as formatted text annotations</span>
+                                </label>
+                                <small class="field-hint">Responses will appear as formatted text annotations directly in the document</small>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="analyzeOnly()">
+                                    <span>Analyze Only</span>
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="processDocument()">
+                                    <span>Process & Add Responses</span>
+                                </button>
+                                <button type="button" class="btn btn-outline" onclick="resetInterface()">
+                                    <span>Reset</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Google Doc Tab -->
+                <div id="google-tab" class="tab-panel">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Google Doc Configuration</h2>
+                            <p class="card-subtitle">Process a Google Doc with tracked changes</p>
+                        </div>
+                        <form id="google-form" class="config-form">
+                            <div class="form-field">
+                                <label for="doc_id" class="field-label">Google Doc ID or URL</label>
+                                <input type="text" id="doc_id" name="doc_id" placeholder="Enter Google Doc ID or full URL" required class="text-input">
+                                <small class="field-hint">Extract the ID from: https://docs.google.com/document/d/DOC_ID/edit</small>
+                            </div>
+
+                            <div class="form-field">
+                                <label for="google_contract_type" class="field-label">Contract Type</label>
+                                <select id="google_contract_type" name="contract_type" class="select-input">
+                                    <option value="">Loading...</option>
+                                </select>
+                                <small class="field-hint">Select the contract type to use the appropriate playbook</small>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label for="google_ai_provider" class="field-label">AI Provider</label>
+                                    <select id="google_ai_provider" name="ai_provider" class="select-input">
+                                        <option value="openai">OpenAI</option>
+                                        <option value="anthropic" selected>Anthropic</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="google_model" class="field-label">Model</label>
+                                    <select id="google_model" name="model" class="select-input">
+                                        <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                        <option value="gpt-4">GPT-4</option>
+                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="info-banner">
+                                <span class="info-icon">ℹ️</span>
+                                <span>Using standard playbook from playbooks/default_playbook.txt</span>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <span>Process Google Doc</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Admin Tab -->
+                <div id="admin-tab" class="tab-panel">
+                    <!-- Contract Types Management -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Contract Types Management</h2>
+                            <p class="card-subtitle">Manage contract types and their associated playbooks</p>
+                        </div>
+                        <div id="contract-types-message" class="alert" style="display: none;"></div>
+                        
+                        <div class="form-field">
+                            <label for="contract_type_name" class="field-label">Contract Type Name</label>
+                            <input type="text" id="contract_type_name" name="contract_type_name" placeholder="e.g., MSA, NDA, SOW" class="text-input">
+                        </div>
+                        
+                        <div class="form-field">
+                            <label for="contract_type_description" class="field-label">Description</label>
+                            <textarea id="contract_type_description" name="contract_type_description" rows="3" class="textarea-input" placeholder="Brief description of this contract type"></textarea>
+                        </div>
+                        
+                        <div class="form-field">
+                            <label for="contract_type_playbook" class="field-label">Playbook File</label>
+                            <input type="text" id="contract_type_playbook" name="contract_type_playbook" placeholder="default_playbook.txt" class="text-input">
+                            <small class="field-hint">Name of the playbook file (must exist in playbooks/ directory)</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-primary" onclick="addContractType()">
+                                <span>Add Contract Type</span>
+                            </button>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div class="form-field">
+                            <h3 style="margin-bottom: 12px;">Existing Contract Types</h3>
+                            <div id="contract-types-list" class="contract-types-list">
+                                <p>Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Playbook Converter -->
+                    <div class="card" style="margin-top: 24px;">
+                        <div class="card-header">
+                            <h2>Playbook Converter</h2>
+                            <p class="card-subtitle">Convert MS Word playbooks to Markdown format</p>
+                        </div>
+                        <div id="converter-message" class="alert" style="display: none;"></div>
+                        
+                        <div class="form-field">
+                            <label for="playbook_converter_file" class="field-label">Upload Word Playbook</label>
+                            <div class="file-upload-wrapper">
+                                <input type="file" id="playbook_converter_file" name="playbook_converter_file" accept=".docx" class="file-input">
+                                <label for="playbook_converter_file" class="file-label">
+                                    <div class="file-icon">📄</div>
+                                    <div class="file-text">
+                                        <span class="file-label-text">Choose a Word playbook file</span>
+                                        <span class="file-hint">.docx files only</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="convertPlaybook()" style="margin-top: 12px;">
+                                <span>Convert to Markdown</span>
+                            </button>
+                        </div>
+                        
+                        <div id="converter-result" style="display: none; margin-top: 24px;">
+                            <div class="form-field">
+                                <label class="field-label">Converted Markdown</label>
+                                <textarea id="converted_markdown" rows="20" class="textarea-input" readonly></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="downloadConvertedMarkdown()">
+                                    <span>Download Markdown</span>
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="copyMarkdownToClipboard()">
+                                    <span>Copy to Clipboard</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Playbook Management -->
+                    <div class="card" style="margin-top: 24px;">
+                        <div class="card-header">
+                            <h2>Playbook Management</h2>
+                            <p class="card-subtitle">Manage your legal playbook configuration</p>
+                        </div>
+                        <div id="admin-message" class="alert" style="display: none;"></div>
+                        
+                        <div class="form-field">
+                            <label for="playbook_content" class="field-label">Playbook Content</label>
+                            <textarea id="playbook_content" name="playbook_content" rows="20" class="textarea-input" placeholder="Playbook content will appear here..."></textarea>
+                            <small class="field-hint">Edit the playbook content above and click "Update Playbook" to save changes</small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-primary" onclick="loadPlaybook()">
+                                <span>Load Playbook</span>
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="updatePlaybook()">
+                                <span>Update Playbook</span>
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="downloadPlaybook()">
+                                <span>Download</span>
+                            </button>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="form-field">
+                            <label for="playbook_upload" class="field-label">Upload New Playbook</label>
+                            <div class="file-upload-wrapper">
+                                <input type="file" id="playbook_upload" name="playbook_upload" accept=".txt" class="file-input">
+                                <label for="playbook_upload" class="file-label">
+                                    <div class="file-icon">📎</div>
+                                    <div class="file-text">
+                                        <span class="file-label-text">Choose a playbook file</span>
+                                        <span class="file-hint">.txt files only</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="uploadPlaybookFile()" style="margin-top: 12px;">
+                                <span>Upload & Replace</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="results-section" class="card results-card" style="display: none;">
+                    <div class="card-header">
+                        <h2>Analysis Results</h2>
+                    </div>
+                    <div id="results-summary" class="results-summary"></div>
+                    <div id="results-details" class="results-details"></div>
+                    <div id="download-section" class="download-section" style="display: none;">
+                        <div class="divider"></div>
+                        <h3 class="section-title">Download Files</h3>
+                        <div id="download-links" class="download-links"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p id="loading-message" class="loading-text">Processing...</p>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast" style="display: none;"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+credentials.json
+token.pickle
+*.pem
+*.key
+
+# Keep contract_types.json (it's configuration, not sensitive)
+!contract_types.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.code-workspace
+
+# Output files
+*_with_comments.docx
+*_output.docx
+output/
+temp/
+
+# Test documents - exclude sample .docx files from root
+*.docx
+!playbooks/*.docx
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
+
+
+
+
+
+# Deployment
+.vercel
+.vercelignore
+# vercel.json - keeping for reference, but can be excluded if needed
+# Uncomment the line below if you don't want vercel.json in the repo
+# vercel.json
+
+# Vercel build artifacts
+.vercel/output

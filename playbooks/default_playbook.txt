@@ -1,0 +1,76 @@
+Plaintext
+================================================================================
+CONTRACTS PLAYBOOK: MUTUAL NDA (STANDARD FORM)
+Reference Template: Mutual Non-Disclosure Agreement v1.0
+Last Updated: 2025-12-09
+================================================================================
+
+1. GENERAL GUIDANCE
+--------------------------------------------------------------------------------
+Usage: This playbook applies to the "Mutual Non-Disclosure Agreement" template.
+Goal: Execute the standard form with minimal changes to speed up deal velocity.
+Authority: Legal Operations / General Counsel.
+
+2. CLAUSE-BY-CLAUSE GUIDANCE
+--------------------------------------------------------------------------------
+
+CLAUSE 1: PURPOSE
+   * Standard Position: "To explore a potential business relationship."
+   * Fallback: Can be specific (e.g., "To evaluate the purchase of software").
+   * Walk-Away: Vague purposes like "general business dealings" or purposes that 
+     imply an actual commercial transaction (e.g., "for the delivery of services").
+
+CLAUSE 2: DEFINITION OF CONFIDENTIAL INFORMATION
+   * Standard Position: Broad definition. Includes oral info if summarized in 
+     writing within 30 days.
+   * Fallback: Remove the requirement to summarize oral info (treat all oral 
+     discussions as confidential if identified as such).
+   * Walk-Away: Definitions that exclude "Trade Secrets" or "Financial Data."
+
+CLAUSE 4: OBLIGATIONS OF RECEIVER (CRITICAL)
+   * Standard Position: Strict confidence; use SOLELY for the Purpose.
+   * Clause 4(d) (AI/ML): Explicit prohibition on using data to train AI/LLMs.
+   * Fallback: None. Do not delete Clause 4(d) without Legal approval.
+   * Red Flag: Counterparty requesting "internal analytics," "benchmarking," or 
+     "product improvement" rights.
+
+CLAUSE 6: TERM AND TERMINATION
+   * Standard Position: 3-year term. 3-year survival. Trade secrets perpetual.
+   * Fallback: 
+       - Term: 1 to 5 years is acceptable.
+       - Survival: Can match the term.
+   * Mandatory: Trade secrets must always be protected indefinitely/perpetually.
+
+CLAUSE 8: REMEDIES
+   * Standard Position: Acknowledgement of injunctive relief.
+   * Fallback: Silence (removing the clause) is acceptable, as equitable relief 
+     is usually available under common law regardless of the contract.
+
+CLAUSE 9: GOVERNING LAW
+   * Standard Position: [Your Company's Home State].
+   * Fallback: Delaware or New York.
+   * Walk-Away: International jurisdictions (unless approved by Legal) or states 
+     with unfavorable trade secret laws.
+
+3. ESCALATION TRIGGERS (REQUIRES LEGAL APPROVAL)
+--------------------------------------------------------------------------------
+Do not sign if the counterparty requests changes to the following:
+
+   [ ] AI TRAINING: Any request to delete Clause 4(d) or add language allowing 
+       data usage for model training.
+   [ ] INDEMNIFICATION: The template has no indemnity; do not add it.
+   [ ] NON-SOLICIT: Do not agree to bans on hiring employees.
+   [ ] EXCLUSIVITY: The NDA must not bind us to a vendor.
+   [ ] IP ASSIGNMENT: No IP rights should transfer via an NDA.
+
+4. NEGOTIATION SHORTCUTS
+--------------------------------------------------------------------------------
+* If they use their paper: Review primarily for "Residuals" clauses (allows them 
+  to use retained memories of our data) and "Purpose" scope.
+* If they strike "Injunctive Relief": Accept it to close the deal (low risk).
+* If they want a 1-year term: Accept it for simple vendor evaluations; reject 
+  for M&A or strategic partnerships.
+
+================================================================================
+END OF PLAYBOOK
+================================================================================

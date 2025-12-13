@@ -1,0 +1,10 @@
+{
+  "contract_types": [
+    {
+      "id": "default",
+      "name": "Default",
+      "description": "Default contract type",
+      "playbook": "default_playbook.txt"
+    }
+  ]
+}
