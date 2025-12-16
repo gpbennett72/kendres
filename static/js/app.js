@@ -194,10 +194,20 @@ function displayResults(data, showDownload = true) {
     const downloadSection = document.getElementById('download-section');
     const downloadLinks = document.getElementById('download-links');
     
-    // Summary
+    const meta = data.metadata || {};
+    // Summary with metadata
     summaryDiv.innerHTML = `
-        <h3>Summary</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <h3>Contract Info</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-top: 0.75rem;">
+            <div><strong>Party 1:</strong> ${meta.party_one || 'Not detected'}</div>
+            <div><strong>Party 2:</strong> ${meta.party_two || 'Not detected'}</div>
+            <div><strong>Contract Type:</strong> ${meta.contract_type || 'Default'}</div>
+            <div><strong>Document:</strong> ${meta.document || 'Unknown'}</div>
+            <div><strong>Playbook:</strong> ${meta.playbook || 'default_playbook.txt'}</div>
+            <div><strong>AI:</strong> ${meta.ai_provider || 'n/a'} (${meta.model || ''})</div>
+        </div>
+        <h3 style="margin-top: 1rem;">Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 0.5rem;">
             <div>
                 <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">${data.redlines_count}</div>
                 <div style="color: var(--text-secondary); font-size: 0.875rem;">Redlines Found</div>

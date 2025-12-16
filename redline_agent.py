@@ -112,7 +112,8 @@ class RedlineAgent:
             'redlines_count': len(redlines),
             'analyses': analyses,
             'output_path': output_path,
-            'summary_path': summary_path
+            'summary_path': summary_path,
+            'document_text': document_text
         }
     
     def process_google_doc(
@@ -158,7 +159,8 @@ class RedlineAgent:
         return {
             'redlines_count': len(redlines),
             'analyses': analyses,
-            'output_path': summary_path
+            'output_path': summary_path,
+            'document_text': document_text
         }
     
     def analyze_only(

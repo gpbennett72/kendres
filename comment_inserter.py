@@ -99,12 +99,12 @@ class CommentInserter:
         return build('docs', 'v1', credentials=creds)
     
     def insert_comments_word(self, analyses: List[Dict], output_path: str, use_tracked_changes: bool = False, extractor=None) -> None:
-        """Insert comments into Word document as native Word comments (comment bubbles).
+        """Insert comments into Word document and optionally add counter redlines.
         
         Args:
             analyses: List of analysis results
             output_path: Path to save the output document
-            use_tracked_changes: Ignored - always uses native Word comments
+            use_tracked_changes: When True, add a tracked-change insertion with the recommended action
             extractor: WordRedlineExtractor instance to access XML element references
         """
         if not self.document:
@@ -119,7 +119,12 @@ class CommentInserter:
         
         # Use native Word comments (comment bubbles in comments pane)
         print("Calling _insert_comments_using_docx_api...", flush=True)
-        self._insert_comments_using_docx_api(analyses, output_path, extractor)
+        self._insert_comments_using_docx_api(
+            analyses,
+            output_path,
+            extractor,
+            use_tracked_changes=use_tracked_changes
+        )
         print("\n=== COMMENT INSERTION COMPLETE ===\n", flush=True)
     
     def _insert_comments_as_annotations(self, analyses: List[Dict], output_path: str, extractor=None) -> None:
@@ -205,7 +210,7 @@ class CommentInserter:
         if os.path.exists(temp_path):
             os.remove(temp_path)
     
-    def _insert_comments_via_xml_direct(self, analyses: List[Dict], output_path: str, extractor, root: ET.Element, namespaces: Dict, temp_path: str) -> None:
+    def _insert_comments_via_xml_direct(self, analyses: List[Dict], output_path: str, extractor, root: ET.Element, namespaces: Dict, temp_path: str, use_tracked_changes: bool = False) -> None:
         """Insert native Word comments via direct XML manipulation.
         
         This creates proper Word comment bubbles by:
@@ -348,6 +353,16 @@ class CommentInserter:
             
             # Create comment ID
             comment_id += 1
+            
+            # Optionally add a counter redline (tracked change) with the recommended action
+            if use_tracked_changes:
+                counter_text = response or fallbacks or comment_text
+                if counter_text:
+                    try:
+                        self._insert_tracked_change_insertion(parent_para, redline_elem, counter_text, namespaces)
+                        print("  ✓ Added counter-proposal as tracked change")
+                    except Exception as e:
+                        print(f"  ⚠ Could not add tracked change: {e}")
             
             # Create the comment in comments.xml
             self._create_word_comment(parent_para, redline_elem, comments_root, comment_id, full_guidance, risk_level, namespaces)
@@ -872,7 +887,7 @@ class CommentInserter:
         # Fallback to formatted text annotations
         self._insert_formatted_annotations_fallback(analyses, output_path, extractor)
     
-    def _insert_comments_using_docx_api(self, analyses: List[Dict], output_path: str, extractor=None) -> None:
+    def _insert_comments_using_docx_api(self, analyses: List[Dict], output_path: str, extractor=None, use_tracked_changes: bool = False) -> None:
         """Insert comments using python-docx's built-in comment API, associating with each redline."""
         print(f"\n=== Starting comment insertion for {len(analyses)} redlines ===")
         
@@ -905,7 +920,15 @@ class CommentInserter:
         # python-docx doesn't have add_comment - we need to use XML-based insertion
         # This creates native Word comments properly
         print("Using XML-based native Word comment insertion (python-docx doesn't support add_comment)")
-        self._insert_comments_via_xml_direct(analyses, output_path, extractor, root, namespaces, temp_path)
+        self._insert_comments_via_xml_direct(
+            analyses,
+            output_path,
+            extractor,
+            root,
+            namespaces,
+            temp_path,
+            use_tracked_changes=use_tracked_changes
+        )
         return
         
         # Track which redline elements we've already processed to avoid duplicates
@@ -1462,8 +1485,8 @@ class CommentInserter:
         print(f"    Final: Found {len(target_runs)} python-docx run(s) matching redline")
         return target_runs
     
-    def _insert_tracked_change_insertion(self, paragraph_elem: ET.Element, text: str, namespaces: Dict, author: str = 'RedLine Agent') -> None:
-        """Insert a tracked change (insertion) into a paragraph."""
+    def _insert_tracked_change_insertion(self, paragraph_elem: ET.Element, target_elem: ET.Element, text: str, namespaces: Dict, author: str = 'RedLine Agent') -> None:
+        """Insert a tracked change (insertion) immediately after the target redline element."""
         # Create insertion element
         ins_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ins')
         ins_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}id', '0')
@@ -1489,9 +1512,14 @@ class CommentInserter:
         run_elem.append(text_elem)
         ins_elem.append(run_elem)
         
-        # Simply append the insertion element to the paragraph
-        # This adds the tracked change at the end of the paragraph content
-        paragraph_elem.append(ins_elem)
+        # Insert immediately after the target element within the paragraph
+        children = list(paragraph_elem)
+        try:
+            target_idx = children.index(target_elem)
+            paragraph_elem.insert(target_idx + 1, ins_elem)
+        except (ValueError, AttributeError):
+            # Fallback: append if we can't locate the target
+            paragraph_elem.append(ins_elem)
     
     def _insert_formatted_annotation(self, paragraph_elem: ET.Element, target_elem: ET.Element, annotation_text: str, risk_level: str, namespaces: Dict) -> None:
         """Insert formatted text annotation right after a redline element."""

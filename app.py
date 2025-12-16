@@ -1,6 +1,7 @@
 """Flask web application for RedLine Agent."""
 
 import os
+import re
 import uuid
 from pathlib import Path
 from dotenv import load_dotenv
@@ -78,6 +79,76 @@ def get_playbook_path(contract_type_id: str = None):
                 return os.path.join(playbooks_dir, file)
     
     return None
+
+
+def extract_parties(document_text: str) -> tuple[str, str]:
+    """
+    Heuristic extraction of the two parties from agreement text.
+    Tries recitals first, then defined-term patterns, then signature/notice blocks.
+    Returns (party_one, party_two).
+    """
+    if not document_text:
+        return "", ""
+    
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', document_text)
+    
+    # Common recital patterns
+    patterns = [
+        r'this\s+agreement\s+(?:is\s+)?(?:made|entered\s+into)?[^.]{0,100}?by\s+and\s+between\s+(?P<p1>.+?)\s+and\s+(?P<p2>[^,.;]+)',
+        r'by\s+and\s+between\s+(?P<p1>.+?)\s+and\s+(?P<p2>[^,.;]+)',
+        r'between\s+(?P<p1>.+?)\s+and\s+(?P<p2>[A-Z][A-Za-z0-9 .,&\'“”"()-]+)',
+    ]
+    
+    def clean(name: str) -> str:
+        name = name.strip(' .,"“”\'')
+        name = re.sub(r'\s+', ' ', name)
+        # Trim if excessively long
+        return name[:200]
+    
+    for pat in patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            return clean(m.group('p1')), clean(m.group('p2'))
+    
+    # Defined-term pattern: Name (the "DefinedTerm")
+    m = re.search(r'(?P<name>[A-Z][A-Za-z0-9 .,&\'()-]{3,120})\s*\(\s*["“](?P<term>[A-Z][A-Za-z0-9 .,&\'()-]{2,60})["”]\s*\)', text)
+    if m:
+        name = clean(m.group('name'))
+        # Try to find a second similar pattern after the first
+        rest = text[m.end():]
+        m2 = re.search(r'(?P<name>[A-Z][A-Za-z0-9 .,&\'()-]{3,120})\s*\(\s*["“][A-Z][A-Za-z0-9 .,&\'()-]{2,60}["”]\s*\)', rest)
+        if m2:
+            return name, clean(m2.group('name'))
+    
+    # Signature / notices fallback: search tail of document
+    tail = text[int(len(text)*0.8):]  # last 20%
+    # Look for lines preceding "By:" or "If to"
+    sig_pat = r'(?:Company|Client|Vendor|Party|Participant|Disclos(?:ing)?|Receiv(?:ing|er)|Provider|Customer)\s*[:\-]?\s*(?P<name>[A-Z][A-Za-z0-9 .,&\'()-]{3,120})'
+    names = []
+    for m in re.finditer(sig_pat, tail, re.IGNORECASE):
+        names.append(clean(m.group('name')))
+    if len(names) >= 2:
+        return names[0], names[1]
+    if len(names) == 1:
+        return names[0], ""
+    
+    return "", ""
+
+
+def get_contract_type_name(contract_type_id: str = None) -> str:
+    """Resolve contract type ID to its display name."""
+    if not contract_type_id:
+        return "Default"
+    try:
+        ContractTypesManager = get_ContractTypesManager()
+        manager = ContractTypesManager()
+        meta = manager.get_type_by_id(contract_type_id)
+        if meta and isinstance(meta, dict):
+            return meta.get('name') or contract_type_id
+    except Exception:
+        pass
+    return contract_type_id
 
 
 @app.route('/')
@@ -266,12 +337,28 @@ def process_document():
                 'response': analysis.get('response', '')
             })
         
+        document_text = result.get('document_text', '')
+        party_one, party_two = extract_parties(document_text)
+        contract_type_id = data.get('contract_type_id')
+        metadata = {
+            'document': os.path.basename(doc_path),
+            'party_one': party_one or 'Not detected',
+            'party_two': party_two or 'Not detected',
+            'counterparty': party_two or 'Not detected',
+            'contract_type': get_contract_type_name(contract_type_id),
+            'playbook': os.path.basename(playbook_path),
+            'ai_provider': ai_provider,
+            'model': model,
+            'redlines_count': result['redlines_count']
+        }
+        
         response = {
             'success': True,
             'redlines_count': result['redlines_count'],
             'analyses': analyses_data,
             'output_file': output_filename,
-            'summary_file': os.path.basename(result.get('summary_path', '')) if result.get('summary_path') else None
+            'summary_file': os.path.basename(result.get('summary_path', '')) if result.get('summary_path') else None,
+            'metadata': metadata
         }
         
         print("\n" + "="*80, flush=True)
