@@ -354,15 +354,40 @@ class CommentInserter:
             # Create comment ID
             comment_id += 1
             
-            # Optionally add a counter redline (tracked change) with the recommended action
-            if use_tracked_changes:
-                counter_text = response or fallbacks or comment_text
-                if counter_text:
-                    try:
-                        self._insert_tracked_change_insertion(parent_para, redline_elem, counter_text, namespaces)
-                        print("  ✓ Added counter-proposal as tracked change")
-                    except Exception as e:
-                        print(f"  ⚠ Could not add tracked change: {e}")
+            # Auto-redline based on AI recommendation
+            auto_action = analysis.get('auto_redline_action', 'comment_only')
+            auto_text = analysis.get('auto_redline_text', '')
+            
+            if use_tracked_changes and auto_action in ['reject_restore', 'reject_replace']:
+                try:
+                    if auto_action == 'reject_restore':
+                        # Restore the original/deleted text
+                        if redline_type == 'deletion':
+                            # Restore the deleted text
+                            restore_text = redline.get('text', '')
+                            if restore_text:
+                                self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
+                                print(f"  ✓ Auto-redline: Restored deleted text")
+                        elif redline_type == 'replacement':
+                            # Restore the old text that was replaced
+                            restore_text = redline.get('old_text', '')
+                            if restore_text:
+                                self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
+                                print(f"  ✓ Auto-redline: Restored original text '{restore_text[:50]}...'")
+                        elif redline_type == 'insertion':
+                            # For insertions we want to reject, we add a deletion marker (handled by comment)
+                            print(f"  ℹ Auto-redline: Insertion rejection noted in comment")
+                    elif auto_action == 'reject_replace' and auto_text:
+                        # Insert specific replacement text from playbook
+                        self._insert_auto_redline(parent_para, redline_elem, auto_text, namespaces, is_restore=False)
+                        print(f"  ✓ Auto-redline: Inserted playbook text '{auto_text[:50]}...'")
+                    elif auto_action == 'reject_replace' and not auto_text and redline_type == 'insertion':
+                        # Reject insertion without replacement - just note in comment
+                        print(f"  ℹ Auto-redline: Insertion should be removed (noted in comment)")
+                except Exception as e:
+                    print(f"  ⚠ Could not add auto-redline: {e}")
+            elif auto_action == 'accept':
+                print(f"  ℹ Auto-redline: Change accepted per playbook (no counter-redline needed)")
             
             # Create the comment in comments.xml
             self._create_word_comment(parent_para, redline_elem, comments_root, comment_id, full_guidance, risk_level, namespaces)
@@ -1485,9 +1510,18 @@ class CommentInserter:
         print(f"    Final: Found {len(target_runs)} python-docx run(s) matching redline")
         return target_runs
     
-    def _insert_tracked_change_insertion(self, paragraph_elem: ET.Element, target_elem: ET.Element, text: str, namespaces: Dict, author: str = 'RedLine Agent') -> None:
-        """Insert a tracked change (insertion) immediately after the target redline element."""
-        # Create insertion element
+    def _insert_auto_redline(self, paragraph_elem: ET.Element, target_elem: ET.Element, text: str, namespaces: Dict, is_restore: bool = False, author: str = 'RedLine Agent') -> None:
+        """Insert an auto-redline (tracked change insertion) with the actual text.
+        
+        Args:
+            paragraph_elem: The parent paragraph XML element
+            target_elem: The redline element to insert after
+            text: The actual text to insert (from playbook or restored original)
+            namespaces: XML namespaces
+            is_restore: If True, this is restoring deleted/replaced text
+            author: Author name for the tracked change
+        """
+        # Create insertion element (tracked change)
         ins_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ins')
         ins_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}id', '0')
         ins_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}author', author)
@@ -1496,19 +1530,12 @@ class CommentInserter:
         # Create run element for the inserted text
         run_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}r')
         
-        # Create text element
+        # Create text element with the actual text (no wrapper)
         text_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
-        text_elem.text = f" [Counter-proposal: {text}]"
+        # Preserve spaces at boundaries
+        text_elem.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+        text_elem.text = text
         
-        # Add formatting (italic, color)
-        rpr = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}rPr')
-        italic = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}i')
-        color = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}color')
-        color.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val', '0066CC')  # Blue
-        
-        rpr.append(italic)
-        rpr.append(color)
-        run_elem.append(rpr)
         run_elem.append(text_elem)
         ins_elem.append(run_elem)
         
@@ -1520,6 +1547,10 @@ class CommentInserter:
         except (ValueError, AttributeError):
             # Fallback: append if we can't locate the target
             paragraph_elem.append(ins_elem)
+    
+    def _insert_tracked_change_insertion(self, paragraph_elem: ET.Element, target_elem: ET.Element, text: str, namespaces: Dict, author: str = 'RedLine Agent') -> None:
+        """Legacy method - redirects to _insert_auto_redline for backward compatibility."""
+        self._insert_auto_redline(paragraph_elem, target_elem, text, namespaces, is_restore=False, author=author)
     
     def _insert_formatted_annotation(self, paragraph_elem: ET.Element, target_elem: ET.Element, annotation_text: str, risk_level: str, namespaces: Dict) -> None:
         """Insert formatted text annotation right after a redline element."""

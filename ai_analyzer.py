@@ -86,7 +86,9 @@ class AIAnalyzer:
                     'response': 'Please review this change manually',
                     'fallbacks': '',
                     'risk_level': 'Medium',
-                    'comment_text': 'Please review this change against the legal playbook.'
+                    'comment_text': 'Please review this change against the legal playbook.',
+                    'auto_redline_action': 'comment_only',
+                    'auto_redline_text': ''
                 })
                 continue
             
@@ -108,7 +110,9 @@ class AIAnalyzer:
                         'response': 'Please review this change manually',
                         'fallbacks': '',
                         'risk_level': 'Medium',
-                        'comment_text': 'Please review this change against the legal playbook.'
+                        'comment_text': 'Please review this change against the legal playbook.',
+                        'auto_redline_action': 'comment_only',
+                        'auto_redline_text': ''
                     })
             except Exception as e:
                 print(f"    ✗ ERROR parsing AI response: {type(e).__name__}: {e}")
@@ -122,7 +126,9 @@ class AIAnalyzer:
                     'response': 'Please review this change manually',
                     'fallbacks': '',
                     'risk_level': 'Medium',
-                    'comment_text': 'Please review this change against the legal playbook.'
+                    'comment_text': 'Please review this change against the legal playbook.',
+                    'auto_redline_action': 'comment_only',
+                    'auto_redline_text': ''
                 })
         
         print(f"✓ Completed analysis of {len(all_analyses)} redline(s)")
@@ -192,25 +198,27 @@ REDLINES TO ANALYZE:
 {redlines_summary}
 
 TASK:
-Analyze each redline submitted and provide an inline comment with recommended actions for each redline. For each redline, you must:
+Analyze each redline and determine if it should be accepted, rejected with a counter-redline, or just commented on. For each redline:
 
 1. Analyze the redline against the legal playbook
 2. Identify the specific playbook principle(s) that apply (quote it exactly from the playbook above)
 3. Assess whether the change aligns with the legal playbook
-4. Provide recommended actions based on the playbook guidance
-5. Provide recommended fallbacks or alternative approaches if the primary recommendation cannot be accepted
+4. Determine the appropriate AUTO-REDLINE ACTION:
+   - "accept": The change is acceptable per the playbook (no counter-redline needed)
+   - "reject_restore": Reject the change and restore the original text (for deletions: restore deleted text; for replacements: restore old text)
+   - "reject_replace": Reject the change and insert specific alternative text from the playbook
+   - "comment_only": The playbook doesn't specify exact replacement text, so only add a comment
+5. If action is "reject_restore" or "reject_replace", provide the EXACT text to insert as "auto_redline_text"
 6. Determine the risk level (Low/Medium/High)
-7. Create a clear, actionable comment with recommended actions and fallback options
+7. Create a clear, actionable comment explaining the reasoning
 
-IMPORTANT: 
-- You MUST analyze each redline individually and thoroughly
-- Identify and quote the specific playbook principle that applies to each redline
-- Include the exact playbook principle text in the "playbook_principle" field
-- The "response" field should contain recommended actions based on the playbook - be specific and actionable
-- The "fallbacks" field should contain alternative approaches, fallback positions, or compromise options if the primary recommendation cannot be accepted
-- The "comment_text" should be a clear, concise inline comment with recommended actions AND fallback options for the reviewer
-- Focus on what actions should be taken based on the playbook guidance, and what alternatives exist if the primary approach is not feasible
-- Always include at least one fallback or alternative approach for each redline
+CRITICAL FOR AUTO-REDLINING:
+- If the playbook specifies exact language (e.g., "3-year term"), use that exact language in auto_redline_text
+- For DELETIONS: If rejecting, set action to "reject_restore" and auto_redline_text to the deleted text that should be restored
+- For INSERTIONS: If rejecting, set action to "reject_replace" with empty auto_redline_text (the insertion will be removed)
+- For REPLACEMENTS: If rejecting, set action to "reject_restore" to restore old text, or "reject_replace" with playbook-specified alternative
+- If the playbook has fallback ranges (e.g., "1 to 5 years acceptable"), and the change falls within that range, use "accept"
+- Only use "comment_only" when the playbook doesn't provide specific language and you cannot determine exact replacement text
 
 Format your response as JSON with this structure:
 {{
@@ -219,15 +227,21 @@ Format your response as JSON with this structure:
       "redline_number": 1,
       "playbook_principle": "Exact text of the playbook principle that applies to this redline",
       "assessment": "Detailed assessment of how the change aligns with the playbook",
+      "auto_redline_action": "accept|reject_restore|reject_replace|comment_only",
+      "auto_redline_text": "Exact text to insert as counter-redline (empty string if accept or comment_only, or if rejecting an insertion)",
       "response": "Recommended actions based on the playbook principle - be specific about what should be done",
-      "fallbacks": "Recommended fallback positions or alternative approaches if the primary recommendation cannot be accepted. Include specific language suggestions or compromise options.",
+      "fallbacks": "Recommended fallback positions or alternative approaches if the primary recommendation cannot be accepted.",
       "risk_level": "Low|Medium|High",
-      "comment_text": "Inline comment with recommended actions and fallback options (clear, actionable guidance including alternatives for the reviewer)"
+      "comment_text": "Inline comment explaining the auto-redline action and reasoning (clear, actionable guidance for the reviewer)"
     }}
   ]
 }}
 
-Note: Each analysis will be inserted as an inline comment next to the corresponding redline, providing the reviewer with recommended actions based on the playbook.
+EXAMPLES:
+- Counterparty changes "three (3) years" to "5 years": If playbook says 3-year term is standard but 1-5 years is acceptable fallback, use "accept" (within fallback range)
+- Counterparty deletes Clause 4(d) about AI training: If playbook says this is critical and cannot be deleted, use "reject_restore" with the deleted clause text
+- Counterparty changes governing law from California to Michigan: If playbook says only CA, DE, or NY acceptable, use "reject_replace" with "California" as auto_redline_text
+- Counterparty adds new indemnification language: If playbook says no indemnification allowed but doesn't specify replacement, use "reject_replace" with empty auto_redline_text to remove it
 
 Additional context: {context or 'None provided'}
 """
@@ -330,7 +344,9 @@ Additional context: {context or 'None provided'}
                         'response': analysis.get('response', ''),
                         'fallbacks': analysis.get('fallbacks', ''),
                         'risk_level': analysis.get('risk_level', 'Medium'),
-                        'comment_text': analysis.get('comment_text', '')
+                        'comment_text': analysis.get('comment_text', ''),
+                        'auto_redline_action': analysis.get('auto_redline_action', 'comment_only'),
+                        'auto_redline_text': analysis.get('auto_redline_text', '')
                     })
             
             return results if results else None
@@ -348,7 +364,9 @@ Additional context: {context or 'None provided'}
                     'response': ai_response[:200] if ai_response else 'Please review manually',
                     'fallbacks': '',
                     'risk_level': 'Medium',
-                    'comment_text': 'Please review this change against legal playbook.'
+                    'comment_text': 'Please review this change against legal playbook.',
+                    'auto_redline_action': 'comment_only',
+                    'auto_redline_text': ''
                 })
             return results
         except Exception as e:
