@@ -149,22 +149,16 @@ body {
 }
 
 .logo-icon svg {
-    height: 40px;
-    width: 40px;
+    height: 44px;
+    width: 44px;
     display: block;
-}
-
-.logo-icon svg rect {
-    fill: #FC5B05;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     transition: var(--transition);
 }
 
-.logo-icon svg path {
-    fill: white;
-}
-
-.logo-icon:hover svg rect {
-    fill: #E04A04;
+.logo-icon:hover svg {
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+    transform: scale(1.02);
 }
 
 .logo-text h1 {
