@@ -360,6 +360,21 @@ class CommentInserter:
             
             if use_tracked_changes and auto_action in ['reject_restore', 'reject_replace']:
                 try:
+                    # STEP 1: Delete the counterparty's unacceptable change first
+                    text_to_delete = None
+                    if redline_type == 'insertion':
+                        # Delete the counterparty's inserted text
+                        text_to_delete = redline.get('text', '')
+                    elif redline_type == 'replacement':
+                        # Delete the counterparty's new text (they already deleted the old)
+                        text_to_delete = redline.get('new_text', '')
+                    # For deletions, no need to delete - the text is already gone, we just restore
+                    
+                    if text_to_delete:
+                        self._insert_tracked_deletion(parent_para, redline_elem, text_to_delete, namespaces)
+                        print(f"  ✓ Auto-redline: Deleted counterparty's text '{text_to_delete[:50]}...'")
+                    
+                    # STEP 2: Insert our replacement/restoration text
                     if auto_action == 'reject_restore':
                         # Restore the original/deleted text
                         if redline_type == 'deletion':
@@ -375,15 +390,16 @@ class CommentInserter:
                                 self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
                                 print(f"  ✓ Auto-redline: Restored original text '{restore_text[:50]}...'")
                         elif redline_type == 'insertion':
-                            # For insertions we want to reject, we add a deletion marker (handled by comment)
-                            print(f"  ℹ Auto-redline: Insertion rejection noted in comment")
-                    elif auto_action == 'reject_replace' and auto_text:
-                        # Insert specific replacement text from playbook
-                        self._insert_auto_redline(parent_para, redline_elem, auto_text, namespaces, is_restore=False)
-                        print(f"  ✓ Auto-redline: Inserted playbook text '{auto_text[:50]}...'")
-                    elif auto_action == 'reject_replace' and not auto_text and redline_type == 'insertion':
-                        # Reject insertion without replacement - just note in comment
-                        print(f"  ℹ Auto-redline: Insertion should be removed (noted in comment)")
+                            # Insertion rejected and deleted - no text to insert
+                            print(f"  ✓ Auto-redline: Counterparty insertion rejected")
+                    elif auto_action == 'reject_replace':
+                        if auto_text:
+                            # Insert specific replacement text from playbook
+                            self._insert_auto_redline(parent_para, redline_elem, auto_text, namespaces, is_restore=False)
+                            print(f"  ✓ Auto-redline: Inserted playbook text '{auto_text[:50]}...'")
+                        elif redline_type == 'insertion':
+                            # Reject insertion without replacement - already deleted above
+                            print(f"  ✓ Auto-redline: Counterparty insertion removed")
                 except Exception as e:
                     print(f"  ⚠ Could not add auto-redline: {e}")
             elif auto_action == 'accept':
@@ -1509,6 +1525,42 @@ class CommentInserter:
         
         print(f"    Final: Found {len(target_runs)} python-docx run(s) matching redline")
         return target_runs
+    
+    def _insert_tracked_deletion(self, paragraph_elem: ET.Element, target_elem: ET.Element, text_to_delete: str, namespaces: Dict, author: str = 'RedLine Agent') -> None:
+        """Insert a tracked deletion to strike out the counterparty's unacceptable text.
+        
+        Args:
+            paragraph_elem: The parent paragraph XML element
+            target_elem: The redline element to insert after (the counterparty's change)
+            text_to_delete: The text being marked as deleted
+            namespaces: XML namespaces
+            author: Author name for the tracked change
+        """
+        # Create deletion element (tracked change)
+        del_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}del')
+        del_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}id', '0')
+        del_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}author', author)
+        del_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}date', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
+        
+        # Create run element for the deleted text
+        run_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}r')
+        
+        # Create delText element (Word uses w:delText for deleted text content)
+        del_text_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}delText')
+        del_text_elem.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+        del_text_elem.text = text_to_delete
+        
+        run_elem.append(del_text_elem)
+        del_elem.append(run_elem)
+        
+        # Insert immediately after the target element within the paragraph
+        children = list(paragraph_elem)
+        try:
+            target_idx = children.index(target_elem)
+            paragraph_elem.insert(target_idx + 1, del_elem)
+        except (ValueError, AttributeError):
+            # Fallback: append if we can't locate the target
+            paragraph_elem.append(del_elem)
     
     def _insert_auto_redline(self, paragraph_elem: ET.Element, target_elem: ET.Element, text: str, namespaces: Dict, is_restore: bool = False, author: str = 'RedLine Agent') -> None:
         """Insert an auto-redline (tracked change insertion) with the actual text.
