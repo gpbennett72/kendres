@@ -360,45 +360,50 @@ class CommentInserter:
             comment_id += 1
             
             # Auto-redline based on AI recommendation
-            # NOTE: We do NOT duplicate the counterparty's redline - their changes are already 
-            # visible in tracked changes. We only insert our counter-proposal text.
+            # If counterparty's change doesn't match playbook:
+            # 1. Strike out (delete) their unacceptable text
+            # 2. Insert our fallback/alternative language
             auto_action = analysis.get('auto_redline_action', 'comment_only')
             auto_text = analysis.get('auto_redline_text', '')
             
             if use_tracked_changes and auto_action in ['reject_restore', 'reject_replace']:
                 try:
-                    # Insert our replacement/restoration text (counterparty's redline is already visible)
+                    # STEP 1: Strike out the counterparty's unacceptable change (show as deleted)
+                    if redline_type == 'insertion':
+                        # Strike out the counterparty's inserted text
+                        text_to_strike = redline.get('text', '')
+                        if text_to_strike:
+                            self._insert_tracked_deletion(parent_para, redline_elem, text_to_strike, namespaces)
+                            print(f"  ✓ Auto-redline: Struck out counterparty's insertion '{text_to_strike[:50]}...'")
+                    elif redline_type == 'replacement':
+                        # Strike out the counterparty's new text (their replacement)
+                        text_to_strike = redline.get('new_text', '')
+                        if text_to_strike:
+                            self._insert_tracked_deletion(parent_para, redline_elem, text_to_strike, namespaces)
+                            print(f"  ✓ Auto-redline: Struck out counterparty's replacement '{text_to_strike[:50]}...'")
+                    # For deletions, the text is already struck out by the counterparty
+                    
+                    # STEP 2: Insert our fallback/alternative language
                     if auto_action == 'reject_restore':
-                        # Restore the original/deleted text
                         if redline_type == 'deletion':
                             # Restore the deleted text
                             restore_text = redline.get('text', '')
                             if restore_text:
                                 self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
-                                print(f"  ✓ Auto-redline: Inserted restoration of deleted text")
+                                print(f"  ✓ Auto-redline: Inserted restored text")
                         elif redline_type == 'replacement':
                             # Restore the old text that was replaced
                             restore_text = redline.get('old_text', '')
                             if restore_text:
                                 self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
                                 print(f"  ✓ Auto-redline: Inserted original text '{restore_text[:50]}...'")
-                        elif redline_type == 'insertion':
-                            # For unwanted insertions, add a deletion marker
-                            ins_text = redline.get('text', '')
-                            if ins_text:
-                                self._insert_tracked_deletion(parent_para, redline_elem, ins_text, namespaces)
-                                print(f"  ✓ Auto-redline: Marked counterparty insertion for deletion")
+                        # For insertions, we just struck it out above - no text to insert
                     elif auto_action == 'reject_replace':
                         if auto_text:
                             # Insert specific replacement text from playbook
                             self._insert_auto_redline(parent_para, redline_elem, auto_text, namespaces, is_restore=False)
                             print(f"  ✓ Auto-redline: Inserted playbook text '{auto_text[:50]}...'")
-                        elif redline_type == 'insertion':
-                            # For unwanted insertions without replacement, add a deletion marker
-                            ins_text = redline.get('text', '')
-                            if ins_text:
-                                self._insert_tracked_deletion(parent_para, redline_elem, ins_text, namespaces)
-                                print(f"  ✓ Auto-redline: Marked counterparty insertion for deletion")
+                        # If no auto_text and it's an insertion, we already struck it out above
                 except Exception as e:
                     print(f"  ⚠ Could not add auto-redline: {e}")
             elif auto_action == 'accept':
