@@ -200,9 +200,9 @@ REDLINES TO ANALYZE:
 TASK:
 Analyze each redline and determine if it should be accepted, rejected with a counter-redline, or just commented on. For each redline:
 
-1. Analyze the redline against the legal playbook
-2. Identify the specific playbook principle(s) that apply (quote it exactly from the playbook above)
-3. Assess whether the change aligns with the legal playbook
+1. FIRST: Find the specific playbook clause/principle that applies to this redline
+2. QUOTE the exact playbook text in "playbook_principle" - this is REQUIRED
+3. THEN assess whether the change aligns with or violates the playbook
 4. Determine the appropriate AUTO-REDLINE ACTION:
    - "accept": The change is acceptable per the playbook (no counter-redline needed)
    - "reject_restore": Reject the change and restore the original text (for deletions: restore deleted text; for replacements: restore old text)
@@ -211,6 +211,13 @@ Analyze each redline and determine if it should be accepted, rejected with a cou
 5. If action is "reject_restore" or "reject_replace", provide the EXACT text to insert as "auto_redline_text"
 6. Determine the risk level (Low/Medium/High)
 7. Create a clear, actionable comment explaining the reasoning
+
+CRITICAL - PLAYBOOK REFERENCE REQUIRED:
+- You MUST cite the specific playbook clause FIRST before making any recommendation
+- The "playbook_principle" field MUST contain the EXACT quoted text from the playbook above
+- Include the clause number/name (e.g., "CLAUSE 6: TERM AND TERMINATION - Standard Position: 3-year term...")
+- If no specific playbook clause applies, state "No specific playbook guidance found for this change"
+- All assessments and actions MUST be justified by the cited playbook principle
 
 CRITICAL FOR AUTO-REDLINING:
 - If the playbook specifies exact language (e.g., "3-year term"), use that exact language in auto_redline_text

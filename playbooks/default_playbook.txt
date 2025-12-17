@@ -1,75 +1,137 @@
-Plaintext
 ================================================================================
-CONTRACTS PLAYBOOK: MUTUAL NDA (STANDARD FORM)
-Reference Template: Mutual Non-Disclosure Agreement v1.0
-Last Updated: 2025-12-09
+CONTRACTS PLAYBOOK: MUTUAL NDA (WITH CLAUSE LIBRARY)
+Version: 2.0
+Last Updated: 2025-12-16
 ================================================================================
 
-1. GENERAL GUIDANCE
+1. OVERVIEW
 --------------------------------------------------------------------------------
-Usage: This playbook applies to the "Mutual Non-Disclosure Agreement" template.
-Goal: Execute the standard form with minimal changes to speed up deal velocity.
-Authority: Legal Operations / General Counsel.
+Usage: Use this guide to negotiate the Company Mutual NDA.
+Instruction: Attempt to maintain the "Standard Position" first. If pushed, you 
+may offer the "Approved Fallback" language without Legal approval.
 
-2. CLAUSE-BY-CLAUSE GUIDANCE
+2. CLAUSE LIBRARY AND FALLBACKS
 --------------------------------------------------------------------------------
 
-CLAUSE 1: PURPOSE
-   * Standard Position: "To explore a potential business relationship."
-   * Fallback: Can be specific (e.g., "To evaluate the purchase of software").
-   * Walk-Away: Vague purposes like "general business dealings" or purposes that 
-     imply an actual commercial transaction (e.g., "for the delivery of services").
-
-CLAUSE 2: DEFINITION OF CONFIDENTIAL INFORMATION
-   * Standard Position: Broad definition. Includes oral info if summarized in 
-     writing within 30 days.
-   * Fallback: Remove the requirement to summarize oral info (treat all oral 
-     discussions as confidential if identified as such).
-   * Walk-Away: Definitions that exclude "Trade Secrets" or "Financial Data."
-
-CLAUSE 4: OBLIGATIONS OF RECEIVER (CRITICAL)
-   * Standard Position: Strict confidence; use SOLELY for the Purpose.
-   * Clause 4(d) (AI/ML): Explicit prohibition on using data to train AI/LLMs.
-   * Fallback: None. Do not delete Clause 4(d) without Legal approval.
-   * Red Flag: Counterparty requesting "internal analytics," "benchmarking," or 
-     "product improvement" rights.
-
-CLAUSE 6: TERM AND TERMINATION
-   * Standard Position: 3-year term. 3-year survival. Trade secrets perpetual.
-   * Fallback: 
-       - Term: 1 to 5 years is acceptable.
-       - Survival: Can match the term.
-   * Mandatory: Trade secrets must always be protected indefinitely/perpetually.
-
-CLAUSE 8: REMEDIES
-   * Standard Position: Acknowledgement of injunctive relief.
-   * Fallback: Silence (removing the clause) is acceptable, as equitable relief 
-     is usually available under common law regardless of the contract.
-
-CLAUSE 9: GOVERNING LAW
-   * Standard Position: [Your Company's Home State].
-   * Fallback: Delaware or New York.
-   * Walk-Away: International jurisdictions (unless approved by Legal) or states 
-     with unfavorable trade secret laws.
-
-3. ESCALATION TRIGGERS (REQUIRES LEGAL APPROVAL)
 --------------------------------------------------------------------------------
-Do not sign if the counterparty requests changes to the following:
-
-   [ ] AI TRAINING: Any request to delete Clause 4(d) or add language allowing 
-       data usage for model training.
-   [ ] INDEMNIFICATION: The template has no indemnity; do not add it.
-   [ ] NON-SOLICIT: Do not agree to bans on hiring employees.
-   [ ] EXCLUSIVITY: The NDA must not bind us to a vendor.
-   [ ] IP ASSIGNMENT: No IP rights should transfer via an NDA.
-
-4. NEGOTIATION SHORTCUTS
+A. PURPOSE
 --------------------------------------------------------------------------------
-* If they use their paper: Review primarily for "Residuals" clauses (allows them 
-  to use retained memories of our data) and "Purpose" scope.
-* If they strike "Injunctive Relief": Accept it to close the deal (low risk).
-* If they want a 1-year term: Accept it for simple vendor evaluations; reject 
-  for M&A or strategic partnerships.
+STANDARD POSITION: Broad exploration.
+"The parties wish to explore a potential business relationship (the 'Purpose')."
+
+APPROVED FALLBACK (Specific Transaction):
+If the deal is defined (e.g., a specific RFP or service):
+"The parties wish to evaluate a potential agreement regarding [Insert Specific 
+Project Name or Service Description] (the 'Purpose')."
+
+--------------------------------------------------------------------------------
+B. DEFINITION OF CONFIDENTIAL INFORMATION (ORAL DISCLOSURE)
+--------------------------------------------------------------------------------
+STANDARD POSITION: Oral info protected ONLY if summarized in writing.
+"...Information disclosed orally shall be considered Confidential Information if 
+identified as such at the time of disclosure or summarized in writing within 
+thirty (30) days of disclosure."
+
+APPROVED FALLBACK (No Summary Required):
+Counterparties often reject the admin burden of summarizing meetings.
+"Information disclosed orally shall be considered Confidential Information if 
+it is identified as confidential at the time of disclosure or if a reasonable 
+person would understand it to be confidential given the nature of the information."
+
+--------------------------------------------------------------------------------
+C. EXCLUSIONS (TIME LIMITS)
+--------------------------------------------------------------------------------
+STANDARD POSITION: No time limit on the exclusions exceptions.
+
+APPROVED FALLBACK (Prior Knowledge):
+If they ask to clarify "Prior Knowledge" requires written proof:
+"(b) was known to the Receiver prior to disclosure by the Discloser as 
+evidenced by the Receiver's written records;"
+
+--------------------------------------------------------------------------------
+D. OBLIGATIONS (DATA USE & AI)
+--------------------------------------------------------------------------------
+STANDARD POSITION: Strict prohibition on AI training.
+"(d) Not use Confidential Information to train, fine-tune, or improve any 
+artificial intelligence or machine learning models;"
+
+APPROVED FALLBACK (Aggregated Data - LOW RISK VENDORS ONLY):
+Only acceptable if we are the Vendor and need to improve our own tools. NEVER 
+ACCEPT if we are the Customer/Discloser.
+"Notwithstanding the foregoing, Receiver may use extraneous, anonymized, and 
+aggregated data derived from Confidential Information for the sole purpose of 
+improving its products and services, provided such data cannot be reverse 
+engineered to identify Discloser."
+
+--------------------------------------------------------------------------------
+E. TERM (DURATION OF AGREEMENT)
+--------------------------------------------------------------------------------
+STANDARD POSITION: 3 Years.
+"This Agreement commences on the Effective Date and shall continue for a period 
+of three (3) years."
+
+APPROVED FALLBACK (Short Term):
+"This Agreement commences on the Effective Date and shall continue for a period 
+of one (1) year."
+
+APPROVED FALLBACK (Long Term):
+"This Agreement commences on the Effective Date and shall continue for a period 
+of five (5) years."
+
+--------------------------------------------------------------------------------
+F. SURVIVAL (DURATION OF PROTECTION)
+--------------------------------------------------------------------------------
+STANDARD POSITION: 3 Years after termination.
+"The confidentiality obligations herein shall survive the termination of this 
+Agreement for a period of three (3) years..."
+
+APPROVED FALLBACK (Match the Term):
+If the Term is 5 years, Survival can be 5 years.
+
+APPROVED FALLBACK (Perpetual - ONLY for our highly sensitive IP):
+"The confidentiality obligations herein shall survive the termination of this 
+Agreement indefinitely."
+
+--------------------------------------------------------------------------------
+G. GOVERNING LAW & VENUE
+--------------------------------------------------------------------------------
+STANDARD POSITION: [Your Home State].
+
+APPROVED FALLBACK 1 (Delaware):
+"This Agreement is governed by the laws of the State of Delaware..."
+
+APPROVED FALLBACK 2 (New York):
+"This Agreement is governed by the laws of the State of New York..."
+
+APPROVED FALLBACK 3 (Silent/Neutral):
+Remove the Governing Law clause entirely. This defaults to common law rules of 
+conflicts (usually where the defendant is located).
+
+--------------------------------------------------------------------------------
+H. RESIDUALS (MEMORY RIGHTS)
+--------------------------------------------------------------------------------
+STANDARD POSITION: Silent (No Residuals Clause).
+We do not want to grant them rights to use "remembered" info.
+
+APPROVED FALLBACK (Unaided Memory Only):
+If a large tech vendor insists on this:
+"Nothing herein shall preclude Receiver from using the residuals resulting from 
+access to Confidential Information. 'Residuals' means information in 
+non-tangible form which may be retained by persons who have had access to the 
+Confidential Information, including ideas, concepts, know-how, or techniques 
+contained therein, provided such use is without reference to the written 
+Confidential Information."
+
+3. ESCALATION TRIGGERS (NO FALLBACKS AVAILABLE)
+--------------------------------------------------------------------------------
+Escalate to Legal if the counterparty insists on:
+
+1.  No "Trade Secret" Exception: They must agree trade secrets are protected 
+    forever.
+2.  Uncapped Liability: If they ask for a Liability Cap (e.g., "Liability 
+    limited to $100k"), escalate. NDAs should remain uncapped.
+3.  Non-Solicit: If they want to ban hiring our employees.
+4.  Publicity: If they want the right to issue a press release about this NDA.
 
 ================================================================================
 END OF PLAYBOOK

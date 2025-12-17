@@ -252,11 +252,16 @@ class CommentInserter:
             
             # Combine guidance to match summary output format exactly
             # This ensures Word comments match what's shown in the summary
+            # CRITICAL: Always reference the playbook principle FIRST
             guidance_parts = []
             
             # Risk Level (shown in summary as badge)
             guidance_parts.append(f"RISK LEVEL: {risk_level}")
             guidance_parts.append("=" * 50)
+            
+            # PLAYBOOK REFERENCE FIRST - Always cite the playbook principle before any analysis
+            if playbook_principle:
+                guidance_parts.append(f"\nPLAYBOOK REFERENCE:\n{playbook_principle}")
             
             # Combine assessment and comment_text into a single Assessment field
             combined_assessment = ""
@@ -276,7 +281,7 @@ class CommentInserter:
                 guidance_parts.append(f"\nRECOMMENDED ACTION:\n{response}")
             
             # If no guidance was found, provide default message
-            if len(guidance_parts) <= 2:  # Only risk level and separator
+            if len(guidance_parts) <= 3:  # Only risk level, separator, and maybe playbook
                 guidance_parts.append("\nPlease review this change against the legal playbook.")
             
             full_guidance = "\n".join(guidance_parts)
@@ -355,26 +360,14 @@ class CommentInserter:
             comment_id += 1
             
             # Auto-redline based on AI recommendation
+            # NOTE: We do NOT duplicate the counterparty's redline - their changes are already 
+            # visible in tracked changes. We only insert our counter-proposal text.
             auto_action = analysis.get('auto_redline_action', 'comment_only')
             auto_text = analysis.get('auto_redline_text', '')
             
             if use_tracked_changes and auto_action in ['reject_restore', 'reject_replace']:
                 try:
-                    # STEP 1: Delete the counterparty's unacceptable change first
-                    text_to_delete = None
-                    if redline_type == 'insertion':
-                        # Delete the counterparty's inserted text
-                        text_to_delete = redline.get('text', '')
-                    elif redline_type == 'replacement':
-                        # Delete the counterparty's new text (they already deleted the old)
-                        text_to_delete = redline.get('new_text', '')
-                    # For deletions, no need to delete - the text is already gone, we just restore
-                    
-                    if text_to_delete:
-                        self._insert_tracked_deletion(parent_para, redline_elem, text_to_delete, namespaces)
-                        print(f"  ✓ Auto-redline: Deleted counterparty's text '{text_to_delete[:50]}...'")
-                    
-                    # STEP 2: Insert our replacement/restoration text
+                    # Insert our replacement/restoration text (counterparty's redline is already visible)
                     if auto_action == 'reject_restore':
                         # Restore the original/deleted text
                         if redline_type == 'deletion':
@@ -382,24 +375,30 @@ class CommentInserter:
                             restore_text = redline.get('text', '')
                             if restore_text:
                                 self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
-                                print(f"  ✓ Auto-redline: Restored deleted text")
+                                print(f"  ✓ Auto-redline: Inserted restoration of deleted text")
                         elif redline_type == 'replacement':
                             # Restore the old text that was replaced
                             restore_text = redline.get('old_text', '')
                             if restore_text:
                                 self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
-                                print(f"  ✓ Auto-redline: Restored original text '{restore_text[:50]}...'")
+                                print(f"  ✓ Auto-redline: Inserted original text '{restore_text[:50]}...'")
                         elif redline_type == 'insertion':
-                            # Insertion rejected and deleted - no text to insert
-                            print(f"  ✓ Auto-redline: Counterparty insertion rejected")
+                            # For unwanted insertions, add a deletion marker
+                            ins_text = redline.get('text', '')
+                            if ins_text:
+                                self._insert_tracked_deletion(parent_para, redline_elem, ins_text, namespaces)
+                                print(f"  ✓ Auto-redline: Marked counterparty insertion for deletion")
                     elif auto_action == 'reject_replace':
                         if auto_text:
                             # Insert specific replacement text from playbook
                             self._insert_auto_redline(parent_para, redline_elem, auto_text, namespaces, is_restore=False)
                             print(f"  ✓ Auto-redline: Inserted playbook text '{auto_text[:50]}...'")
                         elif redline_type == 'insertion':
-                            # Reject insertion without replacement - already deleted above
-                            print(f"  ✓ Auto-redline: Counterparty insertion removed")
+                            # For unwanted insertions without replacement, add a deletion marker
+                            ins_text = redline.get('text', '')
+                            if ins_text:
+                                self._insert_tracked_deletion(parent_para, redline_elem, ins_text, namespaces)
+                                print(f"  ✓ Auto-redline: Marked counterparty insertion for deletion")
                 except Exception as e:
                     print(f"  ⚠ Could not add auto-redline: {e}")
             elif auto_action == 'accept':
@@ -1526,6 +1525,30 @@ class CommentInserter:
         print(f"    Final: Found {len(target_runs)} python-docx run(s) matching redline")
         return target_runs
     
+    def _get_run_properties_from_element(self, element: ET.Element, paragraph_elem: ET.Element, namespaces: Dict) -> Optional[ET.Element]:
+        """Extract run properties (font, size, style) from an element or nearby runs.
+        
+        This ensures auto-redlines match the document's font and style.
+        """
+        w_ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+        
+        # First, try to get rPr from runs within the target element
+        for run in element.findall(f'.//{w_ns}r', namespaces):
+            rpr = run.find(f'{w_ns}rPr')
+            if rpr is not None:
+                # Deep copy the rPr element
+                import copy
+                return copy.deepcopy(rpr)
+        
+        # If not found, look for runs in the paragraph
+        for run in paragraph_elem.findall(f'.//{w_ns}r', namespaces):
+            rpr = run.find(f'{w_ns}rPr')
+            if rpr is not None:
+                import copy
+                return copy.deepcopy(rpr)
+        
+        return None
+    
     def _insert_tracked_deletion(self, paragraph_elem: ET.Element, target_elem: ET.Element, text_to_delete: str, namespaces: Dict, author: str = 'RedLine Agent') -> None:
         """Insert a tracked deletion to strike out the counterparty's unacceptable text.
         
@@ -1536,17 +1559,24 @@ class CommentInserter:
             namespaces: XML namespaces
             author: Author name for the tracked change
         """
+        w_ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+        
         # Create deletion element (tracked change)
-        del_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}del')
-        del_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}id', '0')
-        del_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}author', author)
-        del_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}date', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
+        del_elem = ET.Element(f'{w_ns}del')
+        del_elem.set(f'{w_ns}id', '0')
+        del_elem.set(f'{w_ns}author', author)
+        del_elem.set(f'{w_ns}date', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
         
         # Create run element for the deleted text
-        run_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}r')
+        run_elem = ET.Element(f'{w_ns}r')
+        
+        # Copy run properties from document to match font/style
+        rpr = self._get_run_properties_from_element(target_elem, paragraph_elem, namespaces)
+        if rpr is not None:
+            run_elem.append(rpr)
         
         # Create delText element (Word uses w:delText for deleted text content)
-        del_text_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}delText')
+        del_text_elem = ET.Element(f'{w_ns}delText')
         del_text_elem.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
         del_text_elem.text = text_to_delete
         
@@ -1565,6 +1595,8 @@ class CommentInserter:
     def _insert_auto_redline(self, paragraph_elem: ET.Element, target_elem: ET.Element, text: str, namespaces: Dict, is_restore: bool = False, author: str = 'RedLine Agent') -> None:
         """Insert an auto-redline (tracked change insertion) with the actual text.
         
+        Matches the font and style of the surrounding document text.
+        
         Args:
             paragraph_elem: The parent paragraph XML element
             target_elem: The redline element to insert after
@@ -1573,17 +1605,24 @@ class CommentInserter:
             is_restore: If True, this is restoring deleted/replaced text
             author: Author name for the tracked change
         """
+        w_ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+        
         # Create insertion element (tracked change)
-        ins_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ins')
-        ins_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}id', '0')
-        ins_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}author', author)
-        ins_elem.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}date', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
+        ins_elem = ET.Element(f'{w_ns}ins')
+        ins_elem.set(f'{w_ns}id', '0')
+        ins_elem.set(f'{w_ns}author', author)
+        ins_elem.set(f'{w_ns}date', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
         
         # Create run element for the inserted text
-        run_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}r')
+        run_elem = ET.Element(f'{w_ns}r')
+        
+        # Copy run properties from document to match font/style
+        rpr = self._get_run_properties_from_element(target_elem, paragraph_elem, namespaces)
+        if rpr is not None:
+            run_elem.append(rpr)
         
         # Create text element with the actual text (no wrapper)
-        text_elem = ET.Element('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
+        text_elem = ET.Element(f'{w_ns}t')
         # Preserve spaces at boundaries
         text_elem.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
         text_elem.text = text
