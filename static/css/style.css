@@ -81,11 +81,18 @@
 
 body {
     font-family: var(--font-family);
-    background-color: #F1F3F6;
-    background-image: 
-        radial-gradient(circle at 20% 30%, rgba(2, 32, 67, 0.04) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(2, 32, 67, 0.02) 0%, transparent 50%),
-        linear-gradient(180deg, #F1F3F6 0%, #F5F7FA 100%);
+    /* Workday Brand Gradient - Blue with Orange-Red accent inspired by brand.workday.com */
+    background: 
+        /* Workday Orange-Red accent - top right area */
+        radial-gradient(ellipse 55% 50% at 95% 5%, #FC5B05 0%, rgba(252, 91, 5, 0.4) 30%, rgba(252, 91, 5, 0.15) 50%, transparent 70%),
+        /* Secondary warm glow - right side */
+        radial-gradient(ellipse 40% 60% at 100% 40%, rgba(252, 91, 5, 0.2) 0%, rgba(255, 120, 50, 0.1) 40%, transparent 65%),
+        /* Primary blue sweep - bottom left corner */
+        radial-gradient(ellipse 80% 70% at -5% 105%, #003D7A 0%, rgba(0, 91, 170, 0.5) 40%, transparent 70%),
+        /* Teal accent - bottom area */
+        radial-gradient(ellipse 60% 40% at 30% 100%, rgba(0, 150, 199, 0.25) 0%, transparent 60%),
+        /* Base gradient - warm to cool */
+        linear-gradient(135deg, #FEF8F5 0%, #F5F0F8 30%, #EDF2FA 70%, #E8F0F8 100%);
     background-attachment: fixed;
     color: var(--text-primary);
     line-height: 1.6;
