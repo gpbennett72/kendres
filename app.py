@@ -83,9 +83,9 @@ def get_playbook_path(contract_type_id: str = None):
 
 def extract_parties(document_text: str) -> tuple[str, str]:
     """
-    Heuristic extraction of the two parties from agreement text.
-    Tries recitals first, then defined-term patterns, then signature/notice blocks.
-    Returns (party_one, party_two).
+    Extract Company and Counterparty names from agreement text.
+    Looks for defined term patterns like: Company Name, Inc. ("Company") and ("Counterparty")
+    Returns (company_name, counterparty_name).
     """
     if not document_text:
         return "", ""
@@ -93,47 +93,90 @@ def extract_parties(document_text: str) -> tuple[str, str]:
     # Normalize whitespace
     text = re.sub(r'\s+', ' ', document_text)
     
-    # Common recital patterns
-    patterns = [
-        r'this\s+agreement\s+(?:is\s+)?(?:made|entered\s+into)?[^.]{0,100}?by\s+and\s+between\s+(?P<p1>.+?)\s+and\s+(?P<p2>[^,.;]+)',
-        r'by\s+and\s+between\s+(?P<p1>.+?)\s+and\s+(?P<p2>[^,.;]+)',
-        r'between\s+(?P<p1>.+?)\s+and\s+(?P<p2>[A-Z][A-Za-z0-9 .,&\'“”"()-]+)',
+    def clean_name(name: str) -> str:
+        """Clean and extract the core company name."""
+        name = name.strip(' .,"""\'')
+        name = re.sub(r'\s+', ' ', name)
+        # Remove leading "and" (common when extracting second party)
+        name = re.sub(r'^and\s+', '', name, flags=re.IGNORECASE)
+        # Remove trailing descriptors like "a Delaware corporation with offices at..."
+        name = re.sub(r',?\s*a\s+\w+\s+(?:corporation|company|LLC|limited|partnership).*$', '', name, flags=re.IGNORECASE)
+        # Remove trailing address patterns
+        name = re.sub(r',?\s*with\s+(?:offices?|headquarters|principal\s+place).*$', '', name, flags=re.IGNORECASE)
+        name = re.sub(r',?\s*located\s+at.*$', '', name, flags=re.IGNORECASE)
+        return name.strip(' .,')[:150]
+    
+    company_name = ""
+    counterparty_name = ""
+    
+    # PRIORITY 1: Look for explicit ("Company") and ("Counterparty") definitions
+    # Pattern: [Name, Corp type, address info] ("Company") or (the "Company") or ("Company")
+    
+    # Find Company - look for text before ("Company") or (the "Company") or ("Company")
+    company_patterns = [
+        r'([A-Z][A-Za-z0-9 .,&\'()\-]+?(?:Inc\.|LLC|Corp\.|Corporation|Ltd\.|L\.P\.|LLP|Company|Co\.))[^(]*?\(\s*(?:the\s+)?["""]Company["""]\s*\)',
+        r'([A-Z][A-Za-z0-9 .,&\'()\-]{5,150})[^(]{0,200}?\(\s*(?:the\s+)?["""]Company["""]\s*\)',
     ]
     
-    def clean(name: str) -> str:
-        name = name.strip(' .,"“”\'')
-        name = re.sub(r'\s+', ' ', name)
-        # Trim if excessively long
-        return name[:200]
-    
-    for pat in patterns:
+    for pat in company_patterns:
         m = re.search(pat, text, re.IGNORECASE)
         if m:
-            return clean(m.group('p1')), clean(m.group('p2'))
+            company_name = clean_name(m.group(1))
+            break
     
-    # Defined-term pattern: Name (the "DefinedTerm")
-    m = re.search(r'(?P<name>[A-Z][A-Za-z0-9 .,&\'()-]{3,120})\s*\(\s*["“](?P<term>[A-Z][A-Za-z0-9 .,&\'()-]{2,60})["”]\s*\)', text)
-    if m:
-        name = clean(m.group('name'))
-        # Try to find a second similar pattern after the first
-        rest = text[m.end():]
-        m2 = re.search(r'(?P<name>[A-Z][A-Za-z0-9 .,&\'()-]{3,120})\s*\(\s*["“][A-Z][A-Za-z0-9 .,&\'()-]{2,60}["”]\s*\)', rest)
-        if m2:
-            return name, clean(m2.group('name'))
+    # Find Counterparty - look for text before ("Counterparty") or (the "Counterparty")
+    counterparty_patterns = [
+        r'([A-Z][A-Za-z0-9 .,&\'()\-]+?(?:Inc\.|LLC|Corp\.|Corporation|Ltd\.|L\.P\.|LLP|Company|Co\.))[^(]*?\(\s*(?:the\s+)?["""]Counterparty["""]\s*\)',
+        r'([A-Z][A-Za-z0-9 .,&\'()\-]{5,150})[^(]{0,200}?\(\s*(?:the\s+)?["""]Counterparty["""]\s*\)',
+    ]
     
-    # Signature / notices fallback: search tail of document
-    tail = text[int(len(text)*0.8):]  # last 20%
-    # Look for lines preceding "By:" or "If to"
-    sig_pat = r'(?:Company|Client|Vendor|Party|Participant|Disclos(?:ing)?|Receiv(?:ing|er)|Provider|Customer)\s*[:\-]?\s*(?P<name>[A-Z][A-Za-z0-9 .,&\'()-]{3,120})'
-    names = []
-    for m in re.finditer(sig_pat, tail, re.IGNORECASE):
-        names.append(clean(m.group('name')))
-    if len(names) >= 2:
-        return names[0], names[1]
-    if len(names) == 1:
-        return names[0], ""
+    for pat in counterparty_patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            counterparty_name = clean_name(m.group(1))
+            break
     
-    return "", ""
+    # If we found both, return them
+    if company_name and counterparty_name:
+        return company_name, counterparty_name
+    
+    # PRIORITY 2: Try other common defined terms (Disclosing Party, Receiving Party, Client, etc.)
+    other_party_terms = [
+        ('Disclosing Party', 'Receiving Party'),
+        ('Discloser', 'Receiver'),
+        ('Client', 'Vendor'),
+        ('Customer', 'Provider'),
+        ('Party A', 'Party B'),
+        ('First Party', 'Second Party'),
+    ]
+    
+    for term1, term2 in other_party_terms:
+        if not company_name:
+            pat1 = rf'([A-Z][A-Za-z0-9 .,&\'()\-]+?(?:Inc\.|LLC|Corp\.|Corporation|Ltd\.|L\.P\.|LLP|Company|Co\.))[^(]*?\(\s*(?:the\s+)?["""]?{term1}["""]?\s*\)'
+            m = re.search(pat1, text, re.IGNORECASE)
+            if m:
+                company_name = clean_name(m.group(1))
+        
+        if not counterparty_name:
+            pat2 = rf'([A-Z][A-Za-z0-9 .,&\'()\-]+?(?:Inc\.|LLC|Corp\.|Corporation|Ltd\.|L\.P\.|LLP|Company|Co\.))[^(]*?\(\s*(?:the\s+)?["""]?{term2}["""]?\s*\)'
+            m = re.search(pat2, text, re.IGNORECASE)
+            if m:
+                counterparty_name = clean_name(m.group(1))
+        
+        if company_name and counterparty_name:
+            break
+    
+    # PRIORITY 3: Fallback - look for "by and between" pattern
+    if not company_name or not counterparty_name:
+        between_pat = r'by\s+and\s+between[:\s]+([A-Z][A-Za-z0-9 .,&\'()\-]+?(?:Inc\.|LLC|Corp\.|Corporation|Ltd\.|L\.P\.|LLP|Company|Co\.)).*?(?:and|,)\s+([A-Z][A-Za-z0-9 .,&\'()\-]+?(?:Inc\.|LLC|Corp\.|Corporation|Ltd\.|L\.P\.|LLP|Company|Co\.))'
+        m = re.search(between_pat, text, re.IGNORECASE)
+        if m:
+            if not company_name:
+                company_name = clean_name(m.group(1))
+            if not counterparty_name:
+                counterparty_name = clean_name(m.group(2))
+    
+    return company_name, counterparty_name
 
 
 def get_contract_type_name(contract_type_id: str = None) -> str:

@@ -360,50 +360,70 @@ class CommentInserter:
             comment_id += 1
             
             # Auto-redline based on AI recommendation
-            # If counterparty's change doesn't match playbook:
-            # 1. Strike out (delete) their unacceptable text
-            # 2. Insert our fallback/alternative language
+            # KEY PRINCIPLE: 
+            # - For counterparty INSERTIONS we reject: Transform their w:ins to w:del (strike through)
+            # - For counterparty DELETIONS we reject: Add our w:ins to restore the text
+            # - For counterparty REPLACEMENTS we reject: Strike through their new text, insert our preferred
+            # This approach does NOT duplicate text.
             auto_action = analysis.get('auto_redline_action', 'comment_only')
             auto_text = analysis.get('auto_redline_text', '')
             
             if use_tracked_changes and auto_action in ['reject_restore', 'reject_replace']:
                 try:
-                    # STEP 1: Strike out the counterparty's unacceptable change (show as deleted)
+                    # STEP 1: Handle the counterparty's change
                     if redline_type == 'insertion':
-                        # Strike out the counterparty's inserted text
-                        text_to_strike = redline.get('text', '')
-                        if text_to_strike:
-                            self._insert_tracked_deletion(parent_para, redline_elem, text_to_strike, namespaces)
-                            print(f"  ✓ Auto-redline: Struck out counterparty's insertion '{text_to_strike[:50]}...'")
+                        # Transform their w:ins into a w:del (strike through their insertion)
+                        self._reject_counterparty_insertion(parent_para, redline_elem, namespaces)
+                        print(f"  ✓ Auto-redline: Struck through counterparty's insertion")
                     elif redline_type == 'replacement':
-                        # Strike out the counterparty's new text (their replacement)
-                        text_to_strike = redline.get('new_text', '')
-                        if text_to_strike:
-                            self._insert_tracked_deletion(parent_para, redline_elem, text_to_strike, namespaces)
-                            print(f"  ✓ Auto-redline: Struck out counterparty's replacement '{text_to_strike[:50]}...'")
-                    # For deletions, the text is already struck out by the counterparty
+                        # For replacements, find the w:ins sibling element (contains their new text)
+                        # The redline_elem is typically the w:del, so look for nearby w:ins
+                        w_ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+                        ins_elem = None
+                        
+                        # Check if redline_elem itself is the w:ins
+                        if redline_elem.tag == f'{w_ns}ins':
+                            ins_elem = redline_elem
+                        else:
+                            # Search for w:ins sibling in the paragraph
+                            new_text = redline.get('new_text', '')
+                            if new_text and parent_para is not None:
+                                for elem in parent_para.iter():
+                                    if elem.tag == f'{w_ns}ins':
+                                        # Check if this ins contains the replacement text
+                                        ins_text = ''.join(t.text or '' for t in elem.findall(f'.//{w_ns}t'))
+                                        if new_text in ins_text or ins_text in new_text:
+                                            ins_elem = elem
+                                            print(f"    Found w:ins sibling with text: '{ins_text[:30]}...'")
+                                            break
+                        
+                        if ins_elem is not None:
+                            self._reject_counterparty_insertion(parent_para, ins_elem, namespaces)
+                            print(f"  ✓ Auto-redline: Struck through counterparty's replacement text")
+                        else:
+                            print(f"  ⚠ Could not find w:ins element for replacement")
+                    # For deletions, they've already struck through text - nothing to strike
                     
-                    # STEP 2: Insert our fallback/alternative language
+                    # STEP 2: Insert our counter-proposal
                     if auto_action == 'reject_restore':
                         if redline_type == 'deletion':
-                            # Restore the deleted text
+                            # They deleted text we want to keep - restore it
                             restore_text = redline.get('text', '')
                             if restore_text:
                                 self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
-                                print(f"  ✓ Auto-redline: Inserted restored text")
+                                print(f"  ✓ Auto-redline: Inserted restoration of deleted text")
                         elif redline_type == 'replacement':
                             # Restore the old text that was replaced
                             restore_text = redline.get('old_text', '')
                             if restore_text:
                                 self._insert_auto_redline(parent_para, redline_elem, restore_text, namespaces, is_restore=True)
                                 print(f"  ✓ Auto-redline: Inserted original text '{restore_text[:50]}...'")
-                        # For insertions, we just struck it out above - no text to insert
+                        # For insertions, we already struck it - no text to add back
                     elif auto_action == 'reject_replace':
                         if auto_text:
-                            # Insert specific replacement text from playbook
+                            # Insert our alternative language from the playbook
                             self._insert_auto_redline(parent_para, redline_elem, auto_text, namespaces, is_restore=False)
                             print(f"  ✓ Auto-redline: Inserted playbook text '{auto_text[:50]}...'")
-                        # If no auto_text and it's an insertion, we already struck it out above
                 except Exception as e:
                     print(f"  ⚠ Could not add auto-redline: {e}")
             elif auto_action == 'accept':
@@ -1553,6 +1573,71 @@ class CommentInserter:
                 return copy.deepcopy(rpr)
         
         return None
+    
+    def _reject_counterparty_insertion(self, paragraph_elem: ET.Element, ins_elem: ET.Element, namespaces: Dict, author: str = 'RedLine Agent') -> None:
+        """Transform a counterparty's w:ins element into a w:del element (strike through their insertion).
+        
+        This does NOT duplicate text - it transforms the existing element in place.
+        The counterparty's inserted text will now appear as struck through (deleted by us).
+        
+        Args:
+            paragraph_elem: The parent paragraph XML element
+            ins_elem: The counterparty's w:ins element to transform
+            namespaces: XML namespaces
+            author: Author name for our rejection
+        """
+        w_ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+        
+        # Extract text from the w:ins element
+        text_content = []
+        for run in ins_elem.findall(f'.//{w_ns}r'):
+            for t in run.findall(f'.//{w_ns}t'):
+                if t.text:
+                    text_content.append(t.text)
+        
+        if not text_content:
+            return
+        
+        full_text = ''.join(text_content)
+        
+        # Get run properties from the original insertion to preserve formatting
+        rpr = None
+        first_run = ins_elem.find(f'.//{w_ns}r')
+        if first_run is not None:
+            orig_rpr = first_run.find(f'{w_ns}rPr')
+            if orig_rpr is not None:
+                import copy
+                rpr = copy.deepcopy(orig_rpr)
+        
+        # Create our deletion element
+        del_elem = ET.Element(f'{w_ns}del')
+        del_elem.set(f'{w_ns}id', '0')
+        del_elem.set(f'{w_ns}author', author)
+        del_elem.set(f'{w_ns}date', datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
+        
+        # Create run with the text (as delText for struck-through display)
+        run_elem = ET.Element(f'{w_ns}r')
+        if rpr is not None:
+            run_elem.append(rpr)
+        
+        del_text_elem = ET.Element(f'{w_ns}delText')
+        del_text_elem.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+        del_text_elem.text = full_text
+        
+        run_elem.append(del_text_elem)
+        del_elem.append(run_elem)
+        
+        # Find the position of the original w:ins element and replace it
+        children = list(paragraph_elem)
+        try:
+            idx = children.index(ins_elem)
+            paragraph_elem.remove(ins_elem)
+            paragraph_elem.insert(idx, del_elem)
+            print(f"    Transformed counterparty insertion to deletion: '{full_text[:50]}...'")
+        except (ValueError, AttributeError) as e:
+            # If we can't find it directly, insert after
+            paragraph_elem.append(del_elem)
+            print(f"    Added deletion element (could not replace in place): {e}")
     
     def _insert_tracked_deletion(self, paragraph_elem: ET.Element, target_elem: ET.Element, text_to_delete: str, namespaces: Dict, author: str = 'RedLine Agent') -> None:
         """Insert a tracked deletion to strike out the counterparty's unacceptable text.

@@ -95,7 +95,7 @@ Agreement indefinitely."
 --------------------------------------------------------------------------------
 G. GOVERNING LAW & VENUE
 --------------------------------------------------------------------------------
-STANDARD POSITION: [Your Home State].
+STANDARD POSITION: California
 
 APPROVED FALLBACK 1 (Delaware):
 "This Agreement is governed by the laws of the State of Delaware..."
