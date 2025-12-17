@@ -401,7 +401,22 @@ function showAdminMessage(message, type) {
 
 // Load playbook when admin tab is opened
 let adminTabLoaded = false;
+let adminAuthenticated = false;
+const ADMIN_PASSWORD = 'redline2025';  // Change this password as needed
+
 function switchTab(tab) {
+    // Password protect admin tab
+    if (tab === 'admin' && !adminAuthenticated) {
+        const password = prompt('Enter admin password:');
+        if (password !== ADMIN_PASSWORD) {
+            if (password !== null) {  // User didn't cancel
+                showToast('Incorrect password', 'error');
+            }
+            return;  // Don't switch to admin tab
+        }
+        adminAuthenticated = true;
+    }
+    
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');

@@ -54,13 +54,8 @@
                             <p class="card-subtitle">Upload a Word document with tracked changes for analysis</p>
                         </div>
                         <form id="upload-form" enctype="multipart/form-data" class="upload-form">
-                            <div class="form-field">
-                                <label for="contract_type" class="field-label">Contract Type</label>
-                                <select id="contract_type" name="contract_type" class="select-input">
-                                    <option value="">Loading...</option>
-                                </select>
-                                <small class="field-hint">Select the contract type to use the appropriate playbook</small>
-                            </div>
+                            <!-- Hidden field for contract type - using default -->
+                            <input type="hidden" id="contract_type" name="contract_type" value="">
                             <div class="file-upload-wrapper">
                                 <input type="file" id="document" name="document" accept=".docx,.doc" required class="file-input">
                                 <label for="document" class="file-label">
@@ -86,29 +81,13 @@
 
                     <div id="config-section" class="card config-card" style="display: none;">
                         <div class="card-header">
-                            <h2>AI Configuration</h2>
-                            <p class="card-subtitle">Configure AI settings for redline analysis</p>
+                            <h2>Document Ready</h2>
+                            <p class="card-subtitle">Choose how to process the uploaded document</p>
                         </div>
                         <form id="config-form" class="config-form">
-                            <div class="form-grid">
-                                <div class="form-field">
-                                    <label for="ai_provider" class="field-label">AI Provider</label>
-                                    <select id="ai_provider" name="ai_provider" class="select-input">
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic" selected>Anthropic</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-field">
-                                    <label for="model" class="field-label">Model</label>
-                                    <select id="model" name="model" class="select-input">
-                                        <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-                                        <option value="gpt-4">GPT-4</option>
-                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                    </select>
-                                </div>
-                            </div>
+                            <!-- Hidden fields to maintain form data structure -->
+                            <input type="hidden" id="ai_provider" name="ai_provider" value="anthropic">
+                            <input type="hidden" id="model" name="model" value="claude-3-haiku-20240307">
 
                             <div class="form-field">
                                 <label class="checkbox-label">
@@ -156,33 +135,10 @@
                                 <small class="field-hint">Extract the ID from: https://docs.google.com/document/d/DOC_ID/edit</small>
                             </div>
 
-                            <div class="form-field">
-                                <label for="google_contract_type" class="field-label">Contract Type</label>
-                                <select id="google_contract_type" name="contract_type" class="select-input">
-                                    <option value="">Loading...</option>
-                                </select>
-                                <small class="field-hint">Select the contract type to use the appropriate playbook</small>
-                            </div>
-
-                            <div class="form-grid">
-                                <div class="form-field">
-                                    <label for="google_ai_provider" class="field-label">AI Provider</label>
-                                    <select id="google_ai_provider" name="ai_provider" class="select-input">
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic" selected>Anthropic</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-field">
-                                    <label for="google_model" class="field-label">Model</label>
-                                    <select id="google_model" name="model" class="select-input">
-                                        <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-                                        <option value="gpt-4">GPT-4</option>
-                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                    </select>
-                                </div>
-                            </div>
+                            <!-- Hidden fields to maintain form data structure -->
+                            <input type="hidden" id="google_contract_type" name="contract_type" value="">
+                            <input type="hidden" id="google_ai_provider" name="ai_provider" value="anthropic">
+                            <input type="hidden" id="google_model" name="model" value="claude-3-haiku-20240307">
 
                             <div class="info-banner">
                                 <span class="info-icon">ℹ️</span>
