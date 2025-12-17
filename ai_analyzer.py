@@ -220,12 +220,15 @@ CRITICAL - PLAYBOOK REFERENCE REQUIRED:
 - All assessments and actions MUST be justified by the cited playbook principle
 
 CRITICAL FOR AUTO-REDLINING:
-- If the playbook specifies exact language (e.g., "3-year term"), use that exact language in auto_redline_text
-- For DELETIONS: If rejecting, set action to "reject_restore" and auto_redline_text to the deleted text that should be restored
-- For INSERTIONS: If rejecting, set action to "reject_replace" with empty auto_redline_text (the insertion will be removed)
-- For REPLACEMENTS: If rejecting, set action to "reject_restore" to restore old text, or "reject_replace" with playbook-specified alternative
+- auto_redline_text must contain ONLY the specific text being changed - NOT the entire sentence or clause
+- Match the scope exactly: if "California" was changed to "Japan", auto_redline_text should be just "the State of California" (the deleted portion), NOT the whole governing law sentence
+- For DELETIONS: If rejecting, set action to "reject_restore" and auto_redline_text to EXACTLY the deleted text (nothing more, nothing less)
+- For INSERTIONS: If rejecting, set action to "reject_replace" with empty auto_redline_text (the insertion will be struck through)
+- For REPLACEMENTS: If rejecting, set action to "reject_restore" to restore the old_text exactly, or "reject_replace" with ONLY the replacement portion
 - If the playbook has fallback ranges (e.g., "1 to 5 years acceptable"), and the change falls within that range, use "accept"
 - Only use "comment_only" when the playbook doesn't provide specific language and you cannot determine exact replacement text
+
+IMPORTANT: Do NOT repeat existing document text. Only provide the SPECIFIC portion that needs to be inserted.
 
 Format your response as JSON with this structure:
 {{
@@ -235,7 +238,7 @@ Format your response as JSON with this structure:
       "playbook_principle": "Exact text of the playbook principle that applies to this redline",
       "assessment": "Detailed assessment of how the change aligns with the playbook",
       "auto_redline_action": "accept|reject_restore|reject_replace|comment_only",
-      "auto_redline_text": "Exact text to insert as counter-redline (empty string if accept or comment_only, or if rejecting an insertion)",
+      "auto_redline_text": "ONLY the specific text to insert (matches the scope of what was changed - not the full sentence)",
       "response": "Recommended actions based on the playbook principle - be specific about what should be done",
       "fallbacks": "Recommended fallback positions or alternative approaches if the primary recommendation cannot be accepted.",
       "risk_level": "Low|Medium|High",
@@ -245,10 +248,10 @@ Format your response as JSON with this structure:
 }}
 
 EXAMPLES:
-- Counterparty changes "three (3) years" to "5 years": If playbook says 3-year term is standard but 1-5 years is acceptable fallback, use "accept" (within fallback range)
-- Counterparty deletes Clause 4(d) about AI training: If playbook says this is critical and cannot be deleted, use "reject_restore" with the deleted clause text
-- Counterparty changes governing law from California to Michigan: If playbook says only CA, DE, or NY acceptable, use "reject_replace" with "California" as auto_redline_text
-- Counterparty adds new indemnification language: If playbook says no indemnification allowed but doesn't specify replacement, use "reject_replace" with empty auto_redline_text to remove it
+- Counterparty changes "three (3) years" to "5 years": auto_redline_text = "three (3) years" (just the changed portion)
+- Counterparty deletes "including AI training restrictions": auto_redline_text = "including AI training restrictions" (exactly what was deleted)
+- Counterparty changes "the State of California" to "Japan": auto_redline_text = "the State of California" (just the replaced text, NOT the full sentence)
+- Counterparty adds new indemnification clause: auto_redline_text = "" (empty - the insertion will be struck through)
 
 Additional context: {context or 'None provided'}
 """
